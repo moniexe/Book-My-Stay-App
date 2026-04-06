@@ -1,50 +1,111 @@
-abstract class Room {
-    protected int numberOfBeds;
-    protected double size;
-    protected double price;
+import java.util.*;
 
-    public Room(int numberOfBeds, double size, double price) {
-        this.numberOfBeds = numberOfBeds;
-        this.size = size;
-        this.price = price;
+class Reservation {
+    private String reservationId;
+    private String guestName;
+    private String roomType;
+
+    public Reservation(String reservationId, String guestName, String roomType) {
+        this.reservationId = reservationId;
+        this.guestName = guestName;
+        this.roomType = roomType;
     }
 
-    public void displayDetails() {
-        System.out.println("Beds: " + numberOfBeds);
-        System.out.println("Size: " + size + " sq.ft");
-        System.out.println("Price: ₹" + price);
+    public String getReservationId() {
+        return reservationId;
     }
 
-    public abstract String getRoomType();
-}
-
-class SingleRoom extends Room {
-    public SingleRoom() {
-        super(1, 120.0, 2000.0);
+    public String getGuestName() {
+        return guestName;
     }
 
     public String getRoomType() {
-        return "Single Room";
+        return roomType;
     }
 }
 
-class DoubleRoom extends Room {
-    public DoubleRoom() {
-        super(2, 200.0, 3500.0);
+class RoomInventory {
+    private Map<String, Integer> inventory;
+
+    public RoomInventory() {
+        inventory = new HashMap<>();
+        inventory.put("Single Room", 1);
+        inventory.put("Double Room", 1);
+        inventory.put("Suite Room", 1);
     }
 
-    public String getRoomType() {
-        return "Double Room";
+    public int getAvailability(String roomType) {
+        return inventory.getOrDefault(roomType, 0);
+    }
+
+    public void increment(String roomType) {
+        inventory.put(roomType, inventory.get(roomType) + 1);
+    }
+
+    public void decrement(String roomType) {
+        if (inventory.get(roomType) > 0) {
+            inventory.put(roomType, inventory.get(roomType) - 1);
+        }
     }
 }
 
-class SuiteRoom extends Room {
-    public SuiteRoom() {
-        super(3, 350.0, 7000.0);
+class BookingService {
+    private RoomInventory inventory;
+    private Map<String, Reservation> confirmedBookings;
+    private Map<String, String> reservationToRoomId;
+    private Stack<String> rollbackStack;
+    private int counter = 1;
+
+    public BookingService(RoomInventory inventory) {
+        this.inventory = inventory;
+        confirmedBookings = new HashMap<>();
+        reservationToRoomId = new HashMap<>();
+        rollbackStack = new Stack<>();
     }
 
-    public String getRoomType() {
-        return "Suite Room";
+    public void confirmBooking(String guestName, String roomType) {
+        if (inventory.getAvailability(roomType) > 0) {
+            String reservationId = "R" + counter;
+            String roomId = roomType.substring(0, 2).toUpperCase() + counter;
+            counter++;
+
+            inventory.decrement(roomType);
+
+            Reservation reservation = new Reservation(reservationId, guestName, roomType);
+            confirmedBookings.put(reservationId, reservation);
+            reservationToRoomId.put(reservationId, roomId);
+
+            System.out.println("Booking Confirmed: " + reservationId + " | Room ID: " + roomId);
+        } else {
+            System.out.println("Booking Failed for " + guestName + " (No availability)");
+        }
+    }
+
+    public void cancelBooking(String reservationId) {
+        if (!confirmedBookings.containsKey(reservationId)) {
+            System.out.println("Cancellation Failed: Invalid Reservation ID " + reservationId);
+            return;
+        }
+
+        Reservation reservation = confirmedBookings.get(reservationId);
+        String roomType = reservation.getRoomType();
+        String roomId = reservationToRoomId.get(reservationId);
+
+        rollbackStack.push(roomId);
+
+        inventory.increment(roomType);
+
+        confirmedBookings.remove(reservationId);
+        reservationToRoomId.remove(reservationId);
+
+        System.out.println("Booking Cancelled: " + reservationId + " | Room Released: " + roomId);
+    }
+
+    public void showRollbackStack() {
+        System.out.println("\nRollback Stack (Recently Released Room IDs):");
+        for (String id : rollbackStack) {
+            System.out.println(id);
+        }
     }
 }
 
@@ -53,28 +114,18 @@ public class Main {
 
         System.out.println("Welcome to Book My Stay App\n");
 
-        Room single = new SingleRoom();
-        Room doubleRoom = new DoubleRoom();
-        Room suite = new SuiteRoom();
+        RoomInventory inventory = new RoomInventory();
+        BookingService service = new BookingService(inventory);
 
-        int singleAvailable = 5;
-        int doubleAvailable = 3;
-        int suiteAvailable = 2;
+        service.confirmBooking("Rohan", "Single Room");
+        service.confirmBooking("Amit", "Double Room");
+        service.confirmBooking("Sneha", "Suite Room");
 
-        System.out.println("=== Room Details ===\n");
+        service.cancelBooking("R2");
+        service.cancelBooking("R5");
 
-        System.out.println(single.getRoomType());
-        single.displayDetails();
-        System.out.println("Available: " + singleAvailable + "\n");
+        service.showRollbackStack();
 
-        System.out.println(doubleRoom.getRoomType());
-        doubleRoom.displayDetails();
-        System.out.println("Available: " + doubleAvailable + "\n");
-
-        System.out.println(suite.getRoomType());
-        suite.displayDetails();
-        System.out.println("Available: " + suiteAvailable + "\n");
-
-        System.out.println("Thank you for using Book My Stay App!");
+        System.out.println("\nThank you for using Book My Stay App!");
     }
 }
