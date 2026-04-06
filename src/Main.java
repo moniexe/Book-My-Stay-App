@@ -1,75 +1,91 @@
 import java.util.*;
 
-class Service {
-    private String name;
-    private double cost;
+class Reservation {
+    private String reservationId;
+    private String guestName;
+    private String roomType;
 
-    public Service(String name, double cost) {
-        this.name = name;
-        this.cost = cost;
+    public Reservation(String reservationId, String guestName, String roomType) {
+        this.reservationId = reservationId;
+        this.guestName = guestName;
+        this.roomType = roomType;
     }
 
-    public String getName() {
-        return name;
+    public String getReservationId() {
+        return reservationId;
     }
 
-    public double getCost() {
-        return cost;
-    }
-}
-
-class AddOnServiceManager {
-    private Map<String, List<Service>> reservationServices;
-
-    public AddOnServiceManager() {
-        reservationServices = new HashMap<>();
+    public String getGuestName() {
+        return guestName;
     }
 
-    public void addService(String reservationId, Service service) {
-        reservationServices.putIfAbsent(reservationId, new ArrayList<>());
-        reservationServices.get(reservationId).add(service);
+    public String getRoomType() {
+        return roomType;
     }
 
-    public double calculateTotalCost(String reservationId) {
-        double total = 0;
-        List<Service> services = reservationServices.getOrDefault(reservationId, new ArrayList<>());
-        for (Service s : services) {
-            total += s.getCost();
-        }
-        return total;
-    }
-
-    public void displayServices(String reservationId) {
-        List<Service> services = reservationServices.getOrDefault(reservationId, new ArrayList<>());
-
-        System.out.println("Services for Reservation ID: " + reservationId);
-
-        for (Service s : services) {
-            System.out.println("- " + s.getName() + " (₹" + s.getCost() + ")");
-        }
-
-        System.out.println("Total Add-On Cost: ₹" + calculateTotalCost(reservationId) + "\n");
+    public void display() {
+        System.out.println("Reservation ID: " + reservationId +
+                " | Guest: " + guestName +
+                " | Room Type: " + roomType);
     }
 }
 
-public class Main {
+class BookingHistory {
+    private List<Reservation> history;
+
+    public BookingHistory() {
+        history = new ArrayList<>();
+    }
+
+    public void addReservation(Reservation reservation) {
+        history.add(reservation);
+    }
+
+    public List<Reservation> getAllReservations() {
+        return history;
+    }
+}
+
+class BookingReportService {
+
+    public void displayAllBookings(List<Reservation> reservations) {
+        System.out.println("=== Booking History ===\n");
+        for (Reservation r : reservations) {
+            r.display();
+        }
+    }
+
+    public void generateSummary(List<Reservation> reservations) {
+        Map<String, Integer> summary = new HashMap<>();
+
+        for (Reservation r : reservations) {
+            String type = r.getRoomType();
+            summary.put(type, summary.getOrDefault(type, 0) + 1);
+        }
+
+        System.out.println("\n=== Booking Summary ===\n");
+        for (Map.Entry<String, Integer> entry : summary.entrySet()) {
+            System.out.println(entry.getKey() + " -> Total Bookings: " + entry.getValue());
+        }
+    }
+}
+
+public class Main{
     public static void main(String[] args) {
 
         System.out.println("Welcome to Book My Stay App\n");
 
-        AddOnServiceManager manager = new AddOnServiceManager();
+        BookingHistory history = new BookingHistory();
+        BookingReportService reportService = new BookingReportService();
 
-        String reservationId1 = "SR1";
-        String reservationId2 = "DR1";
+        history.addReservation(new Reservation("SR1", "Rohan", "Single Room"));
+        history.addReservation(new Reservation("DR1", "Amit", "Double Room"));
+        history.addReservation(new Reservation("SR2", "Sneha", "Single Room"));
+        history.addReservation(new Reservation("SU1", "Kiran", "Suite Room"));
 
-        manager.addService(reservationId1, new Service("Breakfast", 500));
-        manager.addService(reservationId1, new Service("Airport Pickup", 1200));
+        reportService.displayAllBookings(history.getAllReservations());
+        reportService.generateSummary(history.getAllReservations());
 
-        manager.addService(reservationId2, new Service("Spa Access", 1500));
-
-        manager.displayServices(reservationId1);
-        manager.displayServices(reservationId2);
-
-        System.out.println("Thank you for using Book My Stay App!");
+        System.out.println("\nThank you for using Book My Stay App!");
     }
 }
